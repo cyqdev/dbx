@@ -196,7 +196,6 @@ fn ssh_client_config() -> Config {
             kex.push(algorithm);
         }
     }
-    preferred.kex = Cow::Owned(kex);
 
     let mut mac = preferred.mac.into_owned();
     // Keep SHA-1 MAC variants as last-resort fallbacks for legacy SSH proxies.
@@ -2254,11 +2253,13 @@ mod tests {
         let config = ssh_client_config();
         let kex = config.preferred.kex;
         let len = kex.len();
-        let position =
-            |needle: russh::kex::Name| kex.iter().position(|algorithm| *algorithm == needle).unwrap();
+        let position = |needle: russh::kex::Name| kex.iter().position(|algorithm| *algorithm == needle).unwrap();
 
-        // The four extension markers must occupy the last four slots, in the
-        // same relative order russh ships them.
+        // In the config proposal the four extension markers occupy the last
+        // four slots, in the same relative order russh ships them. On the wire
+        // russh's write_kex filters out the two server-role markers, so only
+        // the client-role pair (ext-info-c, kex-strict-c-v00@openssh.com)
+        // actually reaches the server.
         assert_eq!(kex[len - 4], russh::kex::EXTENSION_SUPPORT_AS_CLIENT);
         assert_eq!(kex[len - 3], russh::kex::EXTENSION_SUPPORT_AS_SERVER);
         assert_eq!(kex[len - 2], russh::kex::EXTENSION_OPENSSH_STRICT_KEX_AS_CLIENT);
